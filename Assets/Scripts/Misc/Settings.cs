@@ -12,6 +12,10 @@ public static class Settings
     public const float runningSpeed = 5.333f;
     public const float walkingSpeed = 2.666f;
 
+    //Inventory
+    public static int playerInitialInventoryCapacity = 24;
+    public static int playerMaximumInventoryCapacity = 48;
+
     //Player Animation parameters
     public static int xInput;
     public static int yInput;
@@ -40,6 +44,14 @@ public static class Settings
     public static int idleDown;
     public static int idleLeft;
     public static int idleRight;
+
+    //Tools
+    public const string HoeingTool = "Hoe";
+    public const string ChoppingTool = "Axe";
+    public const string BreakingTool = "Pickaxe";
+    public const string ReapingTool = "Scythe";
+    public const string WateringTool = "Watering Can";
+    public const string CollectingTool = "Basket";
 
     //static constructor
     static Settings()
