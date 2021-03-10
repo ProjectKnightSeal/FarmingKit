@@ -4,9 +4,15 @@ using Cinemachine;
 
 public class SwitchConfineBoundingShape : MonoBehaviour
 {
-    void Start()
+
+    private void OnEnable()
     {
-        SwitchBoundingShape();
+        EventHandler.AfterSceneLoadEvent += SwitchBoundingShape;
+    }
+
+    private void OnDisable()
+    {
+        EventHandler.AfterSceneLoadEvent -= SwitchBoundingShape;
     }
 
     /// <summary>

@@ -28,10 +28,59 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         parentCanvas = GetComponentInParent<Canvas>();
     }
 
+    private void OnDisable()
+    {
+        EventHandler.AfterSceneLoadEvent -= SceneLoaded;
+    }
+
+    private void OnEnable()
+    {
+        EventHandler.AfterSceneLoadEvent += SceneLoaded;
+    }
+
     private void Start()
     {
         mainCamera = Camera.main;
-        parentItem = GameObject.FindGameObjectWithTag(Tags.ItemParentTransform).transform;
+    }
+
+    //Sets this inventory slot item to be selected
+    private void SetSelectedItem()
+    {
+        //Clear currently highlighted items
+        inventoryBar.ClearHighlightOnInventorySlots();
+
+        //Highlight item on inventory bar
+        isSelected = true;
+
+        //Set highlighted inventory slots
+        inventoryBar.SetHighlightedInventorySlots();
+
+        //Setitem selected in inventory
+        InventoryManager.Instance.SetSelectedInventoryItem(InventoryLocation.player, itemDetails.itemCode);
+
+        if (itemDetails.canBeCarried == true)
+        {
+            //Show player carring item
+            Player.Instance.ShowCarriedItem(itemDetails.itemCode);
+        }
+        else//show player carrying nothing
+        {
+            Player.Instance.ClearCarriedItem();
+        }
+    }
+
+    private void ClearSelectedItem()
+    {
+        //Clear currently highlighted items
+        inventoryBar.ClearHighlightOnInventorySlots();
+
+        isSelected = false;
+
+        //set no item selected in inventory
+        InventoryManager.Instance.ClearSelectedInventoryItem(InventoryLocation.player);
+
+        //Clear player carrying item
+        Player.Instance.ClearCarriedItem();
     }
 
     /// <summary>
@@ -39,7 +88,7 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     /// </summary>
     private void DropSelectedItemAtMousePosition()
     {
-        if (itemDetails != null)
+        if (itemDetails != null&&isSelected)
         {
             Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
                 -mainCamera.transform.position.z));
@@ -51,6 +100,12 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
             //Remove item from players inventory
             InventoryManager.Instance.RemoveItem(InventoryLocation.player, item.ItemCode);
+
+            //If no more of item then clear selected
+            if (InventoryManager.Instance.FindItemInInventory(InventoryLocation.player, item.ItemCode) == -1)
+            {
+                ClearSelectedItem();
+            }
         }
     }
     
@@ -67,6 +122,8 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             //Get image for dragged item
             Image draggedItemImage = draggedItem.GetComponentInChildren<Image>();
             draggedItemImage.sprite = inventorySlotImage.sprite;
+
+            SetSelectedItem();
         }
     }
 
@@ -98,6 +155,9 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
                 //Destroy inventory text box
                 DestroyInventoryTextBox();
+
+                //Clear selected item
+                ClearSelectedItem();
             }
             //else attempt to drop the item if it can be dropped
             else
@@ -110,6 +170,26 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
             //Enable player input
             Player.Instance.EnablePlayerInput();
+        }
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        //if left click
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            //if inventory slot currently selected then deselect
+            if (isSelected == true)
+            {
+                ClearSelectedItem();
+            }
+            else
+            {
+                if (itemQuantity > 0)
+                {
+                    SetSelectedItem();
+                }
+            }
         }
     }
 
@@ -157,5 +237,10 @@ public class UIInventorySlot : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         {
             Destroy(inventoryBar.inventoryTextBoxGameobject);
         }
+    }
+
+    public void SceneLoaded()
+    {
+        parentItem = GameObject.FindGameObjectWithTag(Tags.ItemParentTransform).transform;
     }
 }
