@@ -1,19 +1,29 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class InventoryManager : SingletonMonobehaviour<InventoryManager>
+public class InventoryManager : SingletonMonobehaviour<InventoryManager>, ISaveable
 {
+    private UIInventoryBar inventoryBar;
+
     private Dictionary<int, ItemDetails> itemDetailsDictionary;
 
     private int[] selectedInventoryItem;//the index of the array is the inventoyr list, and the value is the item code
 
     public List<InventoryItem>[] inventoryLists;
 
-    //the index of the array is the inventory list(from the InventoryLocation enum),and the value is the capacity of
+    //the index of the array is the inventory list(from the InventoryLocation enum),and the value is the capacity of that inventory list
     [HideInInspector] public int[] inventoryListCapacityIntArray;
 
     [SerializeField]
     private SO_ItemList itemList = null;
+
+    private string _iSaveableUniqueID;
+    public string ISaveableUniqueID { get { return _iSaveableUniqueID; } set { _iSaveableUniqueID = value; } }
+
+    private GameObjectSave _gameObjectSave;
+    public GameObjectSave GameObjectSave { get { return _gameObjectSave; } set { _gameObjectSave = value; } }
+
+    
 
     protected override void Awake()
     {
@@ -32,6 +42,28 @@ public class InventoryManager : SingletonMonobehaviour<InventoryManager>
         {
             selectedInventoryItem[i] = -1;
         }
+
+        //Get unique ID for gameobject and create save data object
+        ISaveableUniqueID = GetComponent<GenerateGUID>().GUID;
+
+        GameObjectSave = new GameObjectSave();
+    }
+
+
+
+    private void OnDisable()
+    {
+        ISaveableDeregister();
+    }
+
+    private void OnEnable()
+    {
+        ISaveableRegister();
+    }
+
+    private void Start()
+    {
+        inventoryBar = FindObjectOfType<UIInventoryBar>();
     }
 
     private void CreateInventoryLists()
@@ -93,6 +125,27 @@ public class InventoryManager : SingletonMonobehaviour<InventoryManager>
         //Send event that inventory has been updated
         EventHandler.CallInventoryUpdatedEvent
             (inventoryLocation, inventoryLists[(int)inventoryLocation]);
+    }
+
+    //Add an item of type itemCode to the inventory list for the inventoryLocation
+    public void AddItem(InventoryLocation inventoryLocation,int itemCode)
+    {
+        List<InventoryItem> inventoryList = inventoryLists[(int)inventoryLocation];
+
+        //Check if inventory already contains the item
+        int itemPosition = FindItemInInventory(inventoryLocation, itemCode);
+
+        if (itemPosition != -1)
+        {
+            AddItemAtPosition(inventoryList, itemCode, itemPosition);
+        }
+        else
+        {
+            AddItemAtPosition(inventoryList, itemCode);
+        }
+
+        //Send event that inventory has been updated
+        EventHandler.CallInventoryUpdatedEvent(inventoryLocation, inventoryLists[(int)inventoryLocation]);
     }
 
     /// <summary>
@@ -186,6 +239,27 @@ public class InventoryManager : SingletonMonobehaviour<InventoryManager>
         }
     }
 
+    //Returns the itemDetails (from the SO_ItemList) for the currently selected in the inventoryLocation , or null if an item isn't selected
+    public ItemDetails GetSelectedInventoryItemDetails(InventoryLocation inventoryLocation)
+    {
+        int itemCode = GetSelectedInventoryItem(inventoryLocation);
+
+        if (itemCode == -1)
+        {
+            return null;
+        }
+        else
+        {
+            return GetItemDetails(itemCode);
+        }
+    }
+
+    //Get the selected item for inventoryLocation - returns itemCode or -1 if nothing is selected
+    private int GetSelectedInventoryItem(InventoryLocation inventoryLocation)
+    {
+        return selectedInventoryItem[(int)inventoryLocation];
+    }
+
     //Get the item type description for an item type - returns the item type description as a string for a given ItemType
     public string GetItemTypeDescription(ItemType itemType)
     {
@@ -218,6 +292,84 @@ public class InventoryManager : SingletonMonobehaviour<InventoryManager>
         }
 
         return itemTypeDescription;
+    }
+
+    public void ISaveableRegister()
+    {
+        SaveLoadManager.Instance.iSaveableObjectList.Add(this);
+    }
+
+    public void ISaveableDeregister()
+    {
+        SaveLoadManager.Instance.iSaveableObjectList.Remove(this);
+    }
+
+    public GameObjectSave ISaveableSave()
+    {
+        //Create new scenesave
+        SceneSave sceneSave = new SceneSave();
+
+        //Remove any existing scene save for persistent scene for this gameobject
+        GameObjectSave.sceneData.Remove(Settings.PersistentScene);
+
+        //Add inventory lists array to persistent scene save
+        sceneSave.listInvItemArray = inventoryLists;
+
+        //Add inventory list capacity array to persistent scene save
+        sceneSave.intArrayDictionary = new Dictionary<string, int[]>();
+        sceneSave.intArrayDictionary.Add("inventoryListCapacityArray", inventoryListCapacityIntArray);
+
+        //Add scene save for gameobject
+        GameObjectSave.sceneData.Add(Settings.PersistentScene, sceneSave);
+
+        return GameObjectSave;
+    }
+
+    public void ISaveableLoad(GameSave gameSave)
+    {
+        if(gameSave.gameObjectData.TryGetValue(ISaveableUniqueID,out GameObjectSave gameObjectSave))
+        {
+            GameObjectSave = gameObjectSave;
+
+            //Need to find inventory lists - start by trying to locate saveScene for game object
+            if(gameObjectSave.sceneData.TryGetValue(Settings.PersistentScene,out SceneSave sceneSave))
+            {
+                //list inv items array exists for persistent scene
+                if (sceneSave.listInvItemArray != null)
+                {
+                    inventoryLists = sceneSave.listInvItemArray;
+
+                    //Send events that inventory has been updatad
+                    for(int i = 0; i < (int)InventoryLocation.count; i++)
+                    {
+                        EventHandler.CallInventoryUpdatedEvent((InventoryLocation)i, inventoryLists[i]);
+                    }
+
+                    //Clear any items player was carrying
+                    Player.Instance.ClearCarriedItem();
+
+                    //Clear any highlights on inventory bar
+                    inventoryBar.ClearHighlightOnInventorySlots();
+                }
+
+                //int array dictionary exists for scene
+                if(sceneSave.intArrayDictionary!=null&&sceneSave.intArrayDictionary.TryGetValue("inventoryListCapacityArray",out int[]
+                    inventoryCapacityArray))
+                {
+                    inventoryListCapacityIntArray = inventoryCapacityArray;
+                }
+            }
+        }
+    }
+
+    public void ISaveableStoreScene(string sceneName)
+    {
+        //Nothing required her since the inventory manager is on a persistent scene;
+    }
+
+    public void ISaveableRestoreScene(string sceneName)
+    {
+        //Nothing required here since the inventory manager is on a persistent scene;
     }
 
     //Remove an item from the inventory, and create a game object at the position it was dropped

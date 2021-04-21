@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using UnityEngine;
 
 public delegate void MovementDelegate(float inputX, float inputY,
     bool isWalking, bool isRunning, bool isIdle, bool isCarrying,
@@ -13,6 +13,39 @@ public delegate void MovementDelegate(float inputX, float inputY,
 
 public static class EventHandler
 {
+    //Drop selected item event
+    public static event Action DropSelectedItemEvent;
+
+    public static void CallDropSelectedItemEvent()
+    {
+        if (DropSelectedItemEvent != null)
+        {
+            DropSelectedItemEvent();
+        }
+    }
+
+    //Remove selected item from inventory
+    public static event Action RemoveSelectedItemFromInventoryEvent;
+
+    public static void CallRemoveSelectedItemFromInventoryEvent()
+    {
+        if (RemoveSelectedItemFromInventoryEvent != null)
+        {
+            RemoveSelectedItemFromInventoryEvent();
+        }
+    }
+
+    //Harvest Action Effect Event
+    public static event Action<Vector3, HarvestActionEffect> HarvestActionEffectEvent;
+
+    public static void CallHarvestActionEffectEvent(Vector3 effectPosition,HarvestActionEffect harvestActionEffect)
+    {
+        if(HarvestActionEffectEvent != null)
+        {
+            HarvestActionEffectEvent(effectPosition, harvestActionEffect);
+        }
+    }
+
     //Inventory Updated Event
     public static event Action<InventoryLocation, List<InventoryItem>> InventoryUpdatedEvent;
 
@@ -22,6 +55,17 @@ public static class EventHandler
         if (InventoryUpdatedEvent != null)
         {
             InventoryUpdatedEvent(inventoryLocation, inventoryList);
+        }
+    }
+
+    //Instantiate crop prefabs
+    public static event Action InstantiateCropPrefabsEvent;
+
+    public static void CallInstantiateCropPrefabsEvent()
+    {
+        if (InstantiateCropPrefabsEvent != null)
+        {
+            InstantiateCropPrefabsEvent();
         }
     }
 

@@ -63,6 +63,15 @@ public enum PartVariantType
     count
 }
 
+public enum GridBoolProperty
+{
+    diggable,
+    canPlaceFurniture,
+    canDropItem,
+    isPath,
+    isNPCObstacle
+}
+
 public enum InventoryLocation
 {
     player,
@@ -93,6 +102,16 @@ public enum ToolEffect
     watering
 }
 
+public enum HarvestActionEffect
+{
+    deciduousLeavesFalling,
+    pineConesFalling,
+    choppingTreeTrunk,
+    breakingStone,
+    reaping,
+    none
+}
+
 public enum Direction
 {
     up,
@@ -116,4 +135,12 @@ public enum ItemType
     Furniture,
     none,
     count
+}
+
+public enum Facing
+{
+    none,
+    front,
+    back,
+    right
 }
