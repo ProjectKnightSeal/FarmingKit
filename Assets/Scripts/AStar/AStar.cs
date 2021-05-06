@@ -28,6 +28,8 @@ public class AStar : MonoBehaviour
     //Builds a path for the given sceneName, from the startGridPosition to the endGridPosition, and adds movement steps to the passed in npcMovementStack. Also returns true if path found or false if no path found.
     public bool BuildPath(SceneName sceneName,Vector2Int startGridPosition,Vector2Int endGridPosition,Stack<NPCMovementStep> npcMovementStepStack)
     {
+        pathFound = false;
+
         if (PopulateGridNodesFromGridPropertiesDictionary(sceneName, startGridPosition, endGridPosition))
         {
             if (FindShortestPath())
@@ -149,5 +151,121 @@ public class AStar : MonoBehaviour
                 }
             }
         }
+    }
+
+    private int GetDistance(Node nodeA,Node nodeB)
+    {
+        int dstX = Mathf.Abs(nodeA.gridPosition.x - nodeB.gridPosition.x);
+        int dstY = Mathf.Abs(nodeA.gridPosition.y - nodeB.gridPosition.y);
+
+        if (dstX > dstY)
+        {
+            return 14 * dstY + 10 * (dstX - dstY);
+        }
+        return 14 * dstX + 10 * (dstY - dstX);
+    }
+
+    private Node GetValidNodeNeighbour(int neighboutNodeXPosition,int neighbourNodeYPosition)
+    {
+        //If nelghbour node position is beyond grid then return null
+        if (neighboutNodeXPosition >= gridWidth || neighboutNodeXPosition < 0 || neighbourNodeYPosition >= gridHeight || neighbourNodeYPosition < 0)
+        {
+            return null;
+        }
+
+        //if neighbour is an obstacle or neighbour is in the closed list then skip
+        Node neighbourNode = gridNodes.GetGridNode(neighboutNodeXPosition, neighbourNodeYPosition);
+
+        if (neighbourNode.isObstacle || closedNodeList.Contains(neighbourNode))
+        {
+            return null;
+        }
+        else
+        {
+            return neighbourNode;
+        }
+    }
+
+    private bool PopulateGridNodesFromGridPropertiesDictionary(SceneName sceneName,Vector2Int startGridPosition,Vector2Int endGridPosition)
+    {
+        //Get grid properties dictionary for the scene
+        SceneSave sceneSave;
+
+        if(GridPropertiesManager.Instance.GameObjectSave.sceneData.TryGetValue(sceneName.ToString(),out sceneSave))
+        {
+            //Get Dict grid property details
+            if (sceneSave.gridPropertyDetailsDictionary != null)
+            {
+                //Vector2Int gridDimensions = new Vector2Int();
+                //Vector2Int gridOrigin = new Vector2Int();
+
+                //Get grid height and width
+                if(GridPropertiesManager.Instance.GetGridDimensions(sceneName,out Vector2Int gridDimensions,out Vector2Int gridOrigin))
+                {
+                    //Create nodes grid based on grid properties dictionary
+                    gridNodes = new GridNodes(gridDimensions.x, gridDimensions.y);
+                    gridWidth = gridDimensions.x;
+                    gridHeight = gridDimensions.y;
+                    originX = gridOrigin.x;
+                    originY = gridOrigin.y;
+
+                    //Create openNodeList
+                    openNodeList = new List<Node>();
+
+                    //Create closed Node List
+                    closedNodeList = new HashSet<Node>();
+                }
+                else
+                {
+                    return false;
+                }
+
+                //Populate start node
+                startNode = gridNodes.GetGridNode(startGridPosition.x - gridOrigin.x, startGridPosition.y - gridOrigin.y);
+
+                //Populate target node
+                targetNode = gridNodes.GetGridNode(endGridPosition.x - gridOrigin.x, endGridPosition.y - gridOrigin.y);
+
+                //Populate obstacle and path info for grid
+                for (int x = 0; x < gridDimensions.x; x++)
+                {
+                    for(int y = 0; y < gridDimensions.y; y++)
+                    {
+                        GridPropertyDetails gridPropertyDetails = GridPropertiesManager.Instance.GetGridPropertyDetails(x + gridOrigin.x, y + gridOrigin.y,
+                            sceneSave.gridPropertyDetailsDictionary);
+
+                        if (gridPropertyDetails != null)
+                        {
+                            //If NPC obstacle
+                            if (gridPropertyDetails.isNPCObstacle == true)
+                            {
+                                Node node = gridNodes.GetGridNode(x, y);
+                                node.isObstacle = true;
+                            }
+                            else if (gridPropertyDetails.isPath == true)
+                            {
+                                Node node = gridNodes.GetGridNode(x, y);
+                                node.movementPenalty = pathMovementPenalty;
+                            }
+                            else
+                            {
+                                Node node = gridNodes.GetGridNode(x, y);
+                                node.movementPenalty = defaultMovementPenalty;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -84,8 +84,8 @@ public class MovementAnimationParameterControl : MonoBehaviour
             animator.SetTrigger(Settings.idleRight);
     }
 
-    private void AnimationEventPlayFootstepsound()
+    private void AnimationEventPlayFootstepSound()
     {
-
+        AudioManager.Instance.PlaySound(SoundName.effectFootstepHardGround);
     }
 }

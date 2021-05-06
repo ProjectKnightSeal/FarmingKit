@@ -175,6 +175,13 @@ public class TimeManager : SingletonMonobehaviour<TimeManager>, ISaveable
         }
     }
 
+    public TimeSpan GetGameTime()
+    {
+        TimeSpan gameTime = new TimeSpan(gameHour, gameMinute, gameSecond);
+
+        return gameTime;
+    }
+
     //TODO:Remove
     //Advance 1 game minute
     public void TestAdvanceGameMinute()

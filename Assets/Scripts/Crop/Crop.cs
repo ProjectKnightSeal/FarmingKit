@@ -87,7 +87,7 @@ public class Crop : MonoBehaviour
         //Is there a harvested animation
         if (cropDetails.isHarvestedAnimation && animator != null)
         {
-            //If harvest sprite then add sprite renderer
+            //If harvest sprite then add to sprite renderer
             if (cropDetails.harvestedSprite != null)
             {
                 if (cropHarvestedSpriteRenderer != null)
@@ -104,6 +104,12 @@ public class Crop : MonoBehaviour
             {
                 animator.SetTrigger("harvestleft");
             }
+        }
+
+        //Is there a harvested sound
+        if (cropDetails.harvestSound != SoundName.none)
+        {
+            AudioManager.Instance.PlaySound(cropDetails.harvestSound);
         }
 
         //Delete crop from grid properties
